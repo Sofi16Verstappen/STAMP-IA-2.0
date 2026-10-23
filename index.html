@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAMP IA — Generador de imágenes con IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#141019;
+    --panel:#221f26;
+    --panel-2:#261e34;
+    --line:#372c49;
+    --marigold:#5ECE5E;
+   --marigold-soft:#50f533;
+    --coral:#ff7a66;
+    --text-hi:#f4f1f8;
+    --text-mid:#a89fb8;
+    --text-low:#6f6682;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 78% -8%, rgba(255,194,75,.10), transparent 60%),
+      radial-gradient(900px 600px at 10% 105%, rgba(255,122,102,.10), transparent 55%),
+      var(--ink);
+    color:var(--text-hi);
+    font-family:'DM Sans',system-ui,sans-serif;
+    min-height:100vh;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 20px 72px}
+
+  /* Header */
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:30px}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .mark{
+    font-family:'Instrument Serif',serif;
+    font-size:2.5rem;line-height:1;letter-spacing:.3px;
+    color:var(--text-hi);
+  }
+  .mark em{font-style:italic;color:var(--marigold)}
+  .brand small{color:var(--text-mid);font-size:.82rem;letter-spacing:.4px}
+  .tag{
+    display:inline-flex;align-items:center;gap:7px;
+    border:1px solid var(--line);border-radius:999px;
+    padding:7px 13px;font-size:.78rem;color:var(--text-mid);
+    background:rgba(255,255,255,.02);white-space:nowrap;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--marigold);box-shadow:0 0 0 4px rgba(255,194,75,.15)}
+
+  /* Console */
+  .console{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin-bottom:22px;
+  }
+  .field{position:relative}
+  textarea{
+    width:100%;min-height:92px;resize:vertical;
+    background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;
+    color:var(--text-hi);font-family:inherit;font-size:1.02rem;
+    padding:14px 16px;outline:none;transition:border-color .18s,box-shadow .18s;
+  }
+  textarea::placeholder{color:var(--text-low)}
+  textarea:focus{border-color:var(--marigold);box-shadow:0 0 0 3px rgba(255,194,75,.14)}
+
+  .controls{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px}
+  .ctrl{display:flex;flex-direction:column;gap:7px}
+  .ctrl label{font-size:.74rem;letter-spacing:.5px;text-transform:uppercase;color:var(--text-low)}
+  .seg{display:flex;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .seg button{
+    border:0;background:transparent;color:var(--text-mid);
+    font-family:inherit;font-size:.86rem;font-weight:500;
+    padding:8px 12px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .seg button:hover{color:var(--text-hi)}
+  .seg button[aria-pressed="true"]{background:var(--marigold);color:#2a1e00;font-weight:600}
+  .seg.ratio button{padding:8px 10px;font-size:.8rem}
+
+  .spacer{flex:1 1 40px}
+  .generate{
+    border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:1rem;
+    color:#2a1e00;background:linear-gradient(180deg,var(--marigold-soft),var(--marigold));
+    padding:14px 26px;border-radius:12px;letter-spacing:.2px;
+    box-shadow:0 6px 22px rgba(255,194,75,.28);transition:transform .12s,box-shadow .12s,opacity .15s;
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .generate:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(255,194,75,.36)}
+  .generate:active{transform:translateY(0)}
+  .generate:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+
+  .hint{color:var(--text-low);font-size:.78rem;margin-top:11px}
+  kbd{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.72rem;font-family:inherit}
+
+  /* Chips */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+  .chips span{color:var(--text-low);font-size:.78rem;align-self:center;margin-right:2px}
+  .chip{
+    border:1px solid var(--line);background:rgba(255,255,255,.02);
+    color:var(--text-mid);border-radius:999px;padding:7px 13px;
+    font-size:.83rem;cursor:pointer;font-family:inherit;transition:.15s;
+  }
+  .chip:hover{border-color:var(--coral);color:var(--text-hi)}
+
+  /* Stage */
+  .stage{
+    position:relative;border:1px solid var(--line);border-radius:var(--radius);
+    background:rgba(0,0,0,.28);overflow:hidden;
+    aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+    transition:aspect-ratio .3s;
+  }
+  .stage img{width:100%;height:100%;object-fit:contain;display:block}
+  .empty{text-align:center;padding:40px;color:var(--text-low);max-width:420px}
+  .empty .ico{font-size:2.4rem;margin-bottom:10px;opacity:.7}
+  .empty h3{font-family:'Instrument Serif',serif;font-style:italic;font-size:1.5rem;color:var(--text-mid);font-weight:400;margin-bottom:6px}
+
+  /* Developing animation */
+  .develop{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+  .develop.on{display:flex}
+  .tray{
+    width:min(70%,260px);aspect-ratio:1/1;border-radius:12px;position:relative;overflow:hidden;
+    background:linear-gradient(110deg,#241c33 8%,#3a2e4f 18%,#241c33 33%);
+    background-size:220% 100%;animation:sweep 1.25s linear infinite;
+    border:1px solid var(--line);
+  }
+  @keyframes sweep{to{background-position:-220% 0}}
+  .develop .msg{color:var(--marigold);font-family:'Instrument Serif',serif;font-style:italic;font-size:1.35rem}
+  .develop .sub{color:var(--text-low);font-size:.82rem;max-width:320px}
+
+  /* Result toolbar */
+  .toolbar{display:none;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .toolbar.on{display:flex}
+  .tbtn{
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text-hi);
+    font-family:inherit;font-size:.88rem;font-weight:500;
+    padding:10px 16px;border-radius:10px;cursor:pointer;transition:.15s;display:inline-flex;gap:8px;align-items:center;
+  }
+  .tbtn:hover{border-color:var(--marigold);background:var(--panel)}
+  .tbtn.primary{background:var(--marigold);color:#2a1e00;border-color:transparent;font-weight:600}
+  .tbtn.primary:hover{background:var(--marigold-soft)}
+  .meta{color:var(--text-low);font-size:.78rem;margin-left:auto;max-width:50%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Gallery */
+  .gallery-h{display:flex;align-items:baseline;gap:10px;margin:34px 0 14px}
+  .gallery-h h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:1.5rem}
+  .gallery-h span{color:var(--text-low);font-size:.82rem}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .gallery button{
+    border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;
+    aspect-ratio:1/1;padding:0;background:var(--panel);transition:.15s;
+  }
+  .gallery button:hover{border-color:var(--marigold);transform:translateY(-2px)}
+  .gallery img{width:100%;height:100%;object-fit:cover;display:block}
+  .gempty{color:var(--text-low);font-size:.86rem;padding:8px 0}
+
+  footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);color:var(--text-low);font-size:.8rem;line-height:1.7}
+  footer a{color:var(--marigold);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  @media (max-width:560px){
+    .mark{font-size:2rem}
+    .spacer{flex-basis:100%}
+    .generate{width:100%;justify-content:center}
+    .meta{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .tray{animation:none}
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="mark">STAMP<em>IA</em></span>
+      <small>generador de imágenes con IA</small>
+    </div>
+    <span class="tag"><span class="dot"></span>Gratis · sin registro · sin clave</span>
+  </header>
+
+  <section class="console">
+    <div class="field">
+      <textarea id="prompt" placeholder="Describe lo que quieres ver… p. ej. «un zorro leyendo bajo la lluvia, luz cálida de linterna, estilo acuarela»"></textarea>
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>Formato</label>
+        <div class="seg ratio" id="ratio">
+          <button data-w="1024" data-h="1024" aria-pressed="true">Cuadrado</button>
+          <button data-w="1216" data-h="832">Horizontal</button>
+          <button data-w="832" data-h="1216">Vertical</button>
+          <button data-w="1280" data-h="720">Panorámico</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Modelo</label>
+        <div class="seg" id="model">
+          <button data-m="flux" aria-pressed="true">Flux · calidad</button>
+          <button data-m="turbo">Turbo · rápido</button>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <button class="generate" id="go">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5z"/></svg>
+        Generar
+      </button>
+    </div>
+    <p class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para generar · cada imagen se crea al momento en tu navegador</p>
+  </section>
+
+  <div class="chips" id="chips">
+    <span>Prueba:</span>
+    <button class="chip">gato astronauta flotando entre nebulosas, arte digital</button>
+    <button class="chip">cabaña acogedora en un bosque nevado al atardecer</button>
+    <button class="chip">retrato surrealista hecho de flores y cristal</button>
+    <button class="chip">ciudad cyberpunk bajo la lluvia, luces de neón</button>
+    <button class="chip">taza de café humeante, estilo acuarela minimalista</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="empty" id="empty">
+      <div class="ico">🖼️</div>
+      <h3>Aún no hay nada revelado</h3>
+      <p>Escribe una idea arriba y pulsa Generar. La imagen aparecerá aquí como una foto revelándose.</p>
+    </div>
+    <div class="develop" id="develop">
+      <div class="tray"></div>
+      <div class="msg" id="devMsg">revelando…</div>
+      <div class="sub" id="devSub"></div>
+    </div>
+    <img id="result" alt="" style="display:none">
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="tbtn primary" id="download">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+      Descargar
+    </button>
+    <button class="tbtn" id="variation">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>
+      Otra variación
+    </button>
+    <button class="tbtn" id="open">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      Abrir original
+    </button>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div class="gallery-h">
+    <h2>Tus creaciones</h2>
+    <span id="galCount">de esta sesión</span>
+  </div>
+  <div class="gallery" id="gallery"><p class="gempty">Todavía no has generado nada. Tus imágenes de esta sesión se mostrarán aquí.</p></div>
+
+  <footer>
+    Imágenes generadas con modelos abiertos vía <a href="https://pollinations.ai" target="_blank" rel="noopener">Pollinations.ai</a> — gratis, sin cuenta ni clave de API.
+    No es Nano Banana 2 (ese modelo de Google requiere una API de pago), pero funciona sin costo desde tu navegador.
+    Las imágenes tardan unos segundos; si una falla, vuelve a intentarlo.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const promptEl = $('#prompt');
+  const stage = $('#stage');
+  const empty = $('#empty');
+  const develop = $('#develop');
+  const devSub = $('#devSub');
+  const devMsg = $('#devMsg');
+  const result = $('#result');
+  const toolbar = $('#toolbar');
+  const meta = $('#meta');
+  const goBtn = $('#go');
+  const gallery = $('#gallery');
+  const galCount = $('#galCount');
+
+  const state = { w:1024, h:1024, model:'flux', current:null };
+  const history = [];
+  const messages = ['revelando…','mezclando luz y color…','afinando los detalles…','dando forma a la idea…'];
+
+  // Segmented controls
+  function wireSeg(id, apply){
+    const seg = document.getElementById(id);
+    seg.addEventListener('click', e=>{
+      const b = e.target.closest('button'); if(!b) return;
+      [...seg.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      apply(b);
+    });
+  }
+  wireSeg('ratio', b=>{
+    state.w = +b.dataset.w; state.h = +b.dataset.h;
+    stage.style.aspectRatio = state.w + '/' + state.h;
+  });
+  wireSeg('model', b=>{ state.model = b.dataset.m; });
+
+  // Chips
+  $('#chips').addEventListener('click', e=>{
+    const c = e.target.closest('.chip'); if(!c) return;
+    promptEl.value = c.textContent.trim();
+    promptEl.focus();
+  });
+
+  function buildUrl(prompt, seed){
+    const p = encodeURIComponent(prompt);
+    return 'https://image.pollinations.ai/prompt/' + p +
+      '?width=' + state.w + '&height=' + state.h +
+      '&model=' + state.model + '&seed=' + seed + '&nologo=true';
+  }
+
+  function setDeveloping(on, prompt){
+    develop.classList.toggle('on', on);
+    if(on){
+      empty.style.display='none';
+      result.style.display='none';
+      toolbar.classList.remove('on');
+      devSub.textContent = '«' + prompt.slice(0,90) + (prompt.length>90?'…':'') + '»';
+      devMsg.textContent = messages[Math.floor(Math.random()*messages.length)];
+    }
+  }
+
+  function showError(msg){
+    develop.classList.remove('on');
+    empty.style.display='block';
+    empty.querySelector('.ico').textContent='⚠️';
+    empty.querySelector('h3').textContent='No se pudo generar';
+    empty.querySelector('p').textContent = msg;
+  }
+
+  function generate(prompt, seed){
+    const s = seed != null ? seed : Math.floor(Math.random()*10000000);
+    const url = buildUrl(prompt, s);
+    setDeveloping(true, prompt);
+    goBtn.disabled = true;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      develop.classList.remove('on');
+      result.src = url;
+      result.alt = prompt;
+      result.style.display='block';
+      toolbar.classList.add('on');
+      meta.textContent = state.w+'×'+state.h+' · '+state.model+' · seed '+s;
+      state.current = { url, prompt, seed:s };
+      addToGallery(state.current);
+      goBtn.disabled = false;
+    };
+    img.onerror = ()=>{
+      goBtn.disabled = false;
+      showError('El servicio no respondió a tiempo. Espera un momento y vuelve a pulsar Generar.');
+    };
+    img.src = url;
+  }
+
+  function addToGallery(item){
+    history.unshift(item);
+    if(history.length === 1) gallery.innerHTML='';
+    const b = document.createElement('button');
+    b.title = item.prompt;
+    const im = document.createElement('img');
+    im.src = item.url; im.alt = item.prompt; im.loading='lazy';
+    b.appendChild(im);
+    b.addEventListener('click', ()=>{
+      state.current = item;
+      result.src = item.url; result.alt = item.prompt;
+      result.style.display='block';
+      develop.classList.remove('on'); empty.style.display='none';
+      toolbar.classList.add('on');
+      meta.textContent = 'seed '+item.seed;
+      stage.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+    gallery.prepend(b);
+    galCount.textContent = history.length + (history.length===1?' imagen':' imágenes');
+  }
+
+  function run(){
+    const prompt = promptEl.value.trim();
+    if(!prompt){
+      promptEl.focus();
+      promptEl.style.borderColor = 'var(--coral)';
+      setTimeout(()=>promptEl.style.borderColor='', 900);
+      return;
+    }
+    generate(prompt, null);
+  }
+
+  goBtn.addEventListener('click', run);
+  promptEl.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); run(); }
+  });
+
+  // Toolbar actions
+  $('#variation').addEventListener('click', ()=>{
+    if(state.current) generate(state.current.prompt, null);
+  });
+  $('#open').addEventListener('click', ()=>{
+    if(state.current) window.open(state.current.url, '_blank');
+  });
+  $('#download').addEventListener('click', async ()=>{
+    if(!state.current) return;
+    const btn = $('#download');
+    const old = btn.innerHTML;
+    btn.textContent = 'Descargando…';
+    try{
+      const r = await fetch(state.current.url);
+      const b = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'revelado-' + Date.now() + '.jpg';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+    }catch(err){
+      window.open(state.current.url, '_blank');
+    }
+    btn.innerHTML = old;
+  });
+})();
+</script>
+</body>
+</html>
